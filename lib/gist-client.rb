@@ -14,7 +14,7 @@ require 'json'
 # higher level.
 # require '../rest-client/lib/restclient.rb'
 require 'rest_client'
-
+require 'rest-client/patch'
 require 'mash'
 
 module Gist
@@ -109,18 +109,20 @@ module Gist
       
       def put(method, url, content)
         raise "Password is required for authenticated requests" if !@password
+        ok = method == :post ? 201 : 200
         begin
           resource = RestClient::Resource.new(url, @user, @password)
           resource.method(method).call(content.to_json, :content_type => :json, :accept => :json) {|response, request, result, &block|
+            puts response.code
             case response.code
-            when 201
+            when ok
               JSON.parse(response.body)
             else 
               response.return!(request, result, &block)
             end
           }
         rescue => e
-          raise "Problem #{method.to_s}ing #{url} because #{e.message}"
+          raise "Problem #{method.to_s}ing #{url} because #{e.message}: #{e.backtrace}"
         end
       end
   end
