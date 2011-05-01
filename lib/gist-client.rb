@@ -12,7 +12,8 @@ require 'json'
 # Gist Client uses [rest-client](https://github.com/archiloque/rest-client)
 # for conveniently retrieving REST resources and handling some of the HTTP at a
 # higher level.
-require '../rest-client/lib/restclient.rb'
+# require '../rest-client/lib/restclient.rb'
+require 'rest_client'
 
 require 'mash'
 
@@ -36,23 +37,14 @@ module Gist
 
     # List a users Gists
     def list
-      response = get(format(LIST))     
-      # Responses are of two types, either arrays of hashes or a single hash
-      if response.kind_of? Array
-        # If it's array collect a new array by constructing objects based on the resource
-        # name capitalized and singularized.
-        response.collect do |obj|          
-          Mash.new(obj)
-        end
-      else
-        # Otherwise create a single new object of the correct type.
-        Mash.new(response)
+      get(format(LIST)).collect do |obj|          
+        GistObject.new(obj)
       end
     end
     
-    # Read a single Gist
-    def read(id)
-      Mash.new(get(format(SHOW, id)))
+    # Get a single Gist
+    def show(id)
+      GistObject.new(get(format(SHOW, id)))
     end
     
     # Create a Gist
@@ -66,19 +58,18 @@ module Gist
           }
         }
       }
-      Mash.new(post(format(CREATE), payload))
+      GistObject.new(put(:post, format(CREATE), payload))
     end
     
     # Update a Gist
     def update(gist)
-      raise "Gist is not saved yet" if !gist.id
+      raise "Gist is not saved yet" if !gist[:id]
       payload = {
         :description => gist.description,
         :public => gist.public,
         :files => gist.files
       }
-      puts payload
-      Mash.new(patch(format(UPDATE, gist.id), payload))
+      GistObject.new(put(:patch, format(UPDATE, gist[:id]), payload))
     end    
 
     # TODO
@@ -100,8 +91,7 @@ module Gist
         begin
           # Start by creating a new `RestCLient::Resource` authenticated with
           # the `@project` name and `@password`.
-          resource = RestClient::Resource.new(url)
-          
+          resource = RestClient::Resource.new(url)          
           # `GET` the resource
           resource.get {|response, request, result, &block|
             case response.code
@@ -117,11 +107,11 @@ module Gist
         end
       end
       
-      def post(url, content)
+      def put(method, url, content)
         raise "Password is required for authenticated requests" if !@password
         begin
           resource = RestClient::Resource.new(url, @user, @password)
-          resource.post(content.to_json, :content_type => :json, :accept => :json)  {|response, request, result, &block|
+          resource.method(method).call(content.to_json, :content_type => :json, :accept => :json) {|response, request, result, &block|
             case response.code
             when 201
               JSON.parse(response.body)
@@ -130,26 +120,12 @@ module Gist
             end
           }
         rescue => e
-          raise "Problem posting #{url} because #{e.message}"
+          raise "Problem #{method.to_s}ing #{url} because #{e.message}"
         end
       end
-      
-      def patch(url, content)
-        raise "Password is required for authenticated requests" if !@password
-        begin
-          resource = RestClient::Resource.new(url, @user, @password)
-          resource.post(content.to_json, :content_type => :json, :accept => :json)  {|response, request, result, &block|
-            case response.code
-            when 200
-              JSON.parse(response.body)
-            else 
-              response.return!(request, result, &block)
-            end
-          }
-        rescue => e
-          raise "Problem posting #{url} because #{e.message}"
-        end
-      end      
+  end
   
+  class GistObject < Mash
+    
   end
 end

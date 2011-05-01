@@ -1,10 +1,4 @@
-source :gemcutter
+source "http://rubygems.org"
 
-gem "json"
-gem "rest-client", :git => "https://github.com/archiloque/rest-client.git"
-gem "activesupport"
-
-group :test do
-  gem "rspec"
-  gem "cucumber"
-end	
+# Specify your gem's dependencies in gist-client.gemspec
+gemspec

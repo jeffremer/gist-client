@@ -1,1 +1,4 @@
-scrumy_credentials.yml
+*.gem
+.bundle
+Gemfile.lock
+pkg/*
